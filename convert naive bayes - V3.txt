@@ -1,0 +1,80 @@
+import pandas as pd
+import numpy as np
+import random
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.cluster import KMeans
+
+# Load dataset
+data = pd.read_csv('dataset.csv')
+
+# Rename columns
+data.rename(columns={'Unnamed: 0': 'id', 'Title': 'name', 'Ingredients': 'ingredients',
+                     'Instructions': 'steps', 'Image_Name': 'image'}, inplace=True)
+
+# Pilih kolom yang relevan
+new_data = data[['id', 'name', 'ingredients', 'steps', 'image']]
+
+# Tambahkan kolom rating dengan nilai random antara 1-5
+new_data['rating'] = [random.randint(1, 5) for _ in range(len(new_data))]
+
+# Konversi ingredients ke fitur numerik menggunakan TF-IDF
+tfidf = TfidfVectorizer(stop_words='english')
+X_ingredients = tfidf.fit_transform(new_data['ingredients'].values.astype('U'))
+
+# **Gunakan K-Means untuk membentuk kategori makanan**
+num_clusters = 5
+kmeans = KMeans(n_clusters=num_clusters, random_state=42)
+new_data['category_num'] = kmeans.fit_predict(X_ingredients)
+
+# **Pemetaan kategori otomatis berdasarkan hasil clustering**
+category_mapping = {
+    0: "Meat-Based",
+    1: "Vegetarian",
+    2: "Dessert",
+    3: "Bakery",
+    4: "Italian"
+}
+new_data['category'] = new_data['category_num'].map(category_mapping)  # Ubah angka menjadi nama kategori
+
+# **Gunakan Naïve Bayes untuk memprediksi kategori berdasarkan ingredients**
+model_category = MultinomialNB()
+model_category.fit(X_ingredients, new_data['category_num'])  # Latih dengan kategori numerik
+
+# **Gunakan Naïve Bayes untuk rekomendasi makanan berdasarkan nama**
+cv = TfidfVectorizer(max_features=10000, stop_words='english')
+X_name = cv.fit_transform(new_data['name'].values.astype('U'))
+
+model_recommendation = MultinomialNB()
+y = np.arange(len(new_data))
+model_recommendation.fit(X_name, y)
+
+# **Fungsi untuk mencari berdasarkan nama kategori**
+def search_by_category(category_name):
+    matching_items = new_data[new_data['category'] == category_name]
+    if matching_items.empty:
+        print(f"Tidak ditemukan makanan dalam kategori '{category_name}'")
+    else:
+        print(f"Makanan dalam kategori '{category_name}':")
+        print(matching_items[['id', 'name', 'ingredients', 'category', 'rating']].head())
+
+# **Fungsi untuk mencari berdasarkan nama dan memberikan 5 rekomendasi**
+def recommend_nb(name):
+    query_vec = cv.transform([name.lower()])
+    predicted_probs = model_recommendation.predict_proba(query_vec)[0]
+    top_5_indices = np.argsort(predicted_probs)[-5:][::-1]
+
+    recommended_items = new_data.iloc[top_5_indices].copy()
+    recommended_items['predicted_category'] = recommended_items['ingredients'].apply(
+        lambda x: category_mapping.get(model_category.predict(tfidf.transform([x.lower()]))[0], "Unknown")
+    )
+
+    print("Rekomendasi untuk:", name)
+    print(recommended_items[['id', 'name', 'ingredients', 'category', 'predicted_category', 'rating']])
+
+# **Tes pencarian berdasarkan nama kategori**
+search_by_category("Dessert")
+
+# **Tes pencarian berdasarkan nama makanan**
+target_item = "BURGER"
+recommend_nb(target_item)

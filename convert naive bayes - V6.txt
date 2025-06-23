@@ -1,0 +1,129 @@
+import pandas as pd
+import numpy as np
+import random
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
+
+# Load dataset
+data = pd.read_csv('dataset.csv')
+
+# Rename columns
+data.rename(columns={'Unnamed: 0': 'id', 'Title': 'name', 'Ingredients': 'ingredients',
+                     'Instructions': 'steps', 'Image_Name': 'image'}, inplace=True)
+
+# Pilih kolom yang relevan
+new_data = data[['id', 'name', 'ingredients', 'steps', 'image']]
+
+# Tambahkan kolom rating dengan nilai random antara 1-5
+new_data['rating'] = [random.randint(1, 5) for _ in range(len(new_data))]
+
+# Tambahkan kolom cluster dengan nilai random 0 atau 1
+new_data['cluster'] = np.random.choice([0, 1], size=len(new_data), replace=True)
+new_data['cluster_label'] = new_data['cluster'].map({0: 'biasa saja', 1: 'favorit'})
+
+# **Gunakan TF-IDF lebih optimal**
+tfidf = TfidfVectorizer(stop_words='english', max_features=20000, ngram_range=(1, 3))
+X_ingredients = tfidf.fit_transform(new_data['ingredients'].values.astype('U'))
+
+# **Optimasi jumlah cluster menggunakan Elbow Method**
+wcss = []
+for i in range(5, 15):  # Uji cluster dari 5 hingga 15
+    kmeans = KMeans(n_clusters=i, random_state=42)
+    kmeans.fit(X_ingredients)
+    wcss.append(kmeans.inertia_)
+
+# Plot Elbow Method
+plt.plot(range(5, 15), wcss, marker='o')
+plt.xlabel("Jumlah Cluster")
+plt.ylabel("WCSS")
+plt.title("Elbow Method - Optimal Cluster")
+plt.show()
+
+# **Gunakan K-Means dengan cluster lebih optimal**
+optimal_clusters = 10
+kmeans = KMeans(n_clusters=optimal_clusters, random_state=42)
+new_data['category_num'] = kmeans.fit_predict(X_ingredients)
+
+# **Pemetaan kategori lebih rinci berdasarkan ingredients**
+def categorize_food(ingredients):
+    ingredients = ingredients.lower()
+    
+    # 🍖 Daging & Protein Hewani
+    if any(item in ingredients for item in ['beef', 'lamb', 'pork', 'chicken', 'turkey', 'duck', 'bacon', 'sausage']):
+        return "Meat-Based"
+    elif any(item in ingredients for item in ['fish', 'shrimp', 'salmon', 'tuna', 'crab', 'mussels']):
+        return "Seafood"
+    
+    # 🥦 Sayuran & Tanaman
+    elif any(item in ingredients for item in ['spinach', 'kale', 'lettuce', 'broccoli', 'carrot', 'potato', 'tomato', 'cucumber', 'mushroom']):
+        return "Vegetarian"
+
+    # 🍚 Sumber Karbohidrat
+    elif any(item in ingredients for item in ['rice', 'oats', 'quinoa', 'barley', 'flour', 'bread', 'pasta', 'tortilla', 'sweet potato']):
+        return "Bakery"
+
+    # 🍶 Produk Susu & Alternatifnya
+    elif any(item in ingredients for item in ['milk', 'cheese', 'butter', 'yogurt', 'almond milk', 'soy milk']):
+        return "Dairy-Based"
+
+    # 🍯 Pemanis & Perasa
+    elif any(item in ingredients for item in ['sugar', 'honey', 'maple syrup', 'stevia', 'salt', 'pepper', 'garlic', 'cinnamon', 'basil', 'oregano']):
+        return "Seasoning & Sweetener"
+
+    # 🍩 Dessert & Bahan Kue
+    elif any(item in ingredients for item in ['chocolate', 'cocoa', 'vanilla', 'eggs', 'baking powder']):
+        return "Dessert"
+    
+    # Jika tidak sesuai kategori di atas
+    else:
+        return "Other"
+
+new_data['category'] = new_data['ingredients'].apply(categorize_food)
+
+# **Gunakan Naïve Bayes dengan smoothing alpha lebih tinggi**
+model_category = MultinomialNB(alpha=0.5)
+model_category.fit(X_ingredients, new_data['category_num'])
+
+# **Gunakan TF-IDF lebih kuat untuk rekomendasi nama**
+cv = TfidfVectorizer(max_features=20000, stop_words='english', ngram_range=(1, 3))
+X_name = cv.fit_transform(new_data['name'].values.astype('U'))
+
+model_recommendation = MultinomialNB(alpha=0.5)
+y = np.arange(len(new_data))
+model_recommendation.fit(X_name, y)
+
+# **Fungsi pencarian kategori dengan hasil acak**
+def search_by_category(category_name, N=5):
+    matching_items = new_data[new_data['category'] == category_name]
+    print(f"Makanan acak dalam kategori '{category_name}':")
+    print(matching_items.sample(frac=1).head(N)[['id', 'name', 'ingredients', 'category', 'rating', 'cluster_label']])
+
+# **Fungsi pencarian berdasarkan cluster dengan hasil acak**
+def search_by_cluster(cluster_label, N=5):
+    matching_items = new_data[new_data['cluster_label'] == cluster_label]
+    print(f"Makanan acak dalam cluster '{cluster_label}':")
+    print(matching_items.sample(frac=1).head(N)[['id', 'name', 'ingredients', 'category', 'rating', 'cluster_label']])
+
+# **Fungsi rekomendasi berdasarkan nama makanan**
+def recommend_nb(name):
+    query_vec = cv.transform([name.lower()])
+    predicted_probs = model_recommendation.predict_proba(query_vec)[0]
+    top_5_indices = np.argsort(predicted_probs)[-5:][::-1]
+
+    recommended_items = new_data.iloc[top_5_indices].copy()
+    recommended_items['predicted_category'] = recommended_items['ingredients'].apply(categorize_food)
+
+    print("Rekomendasi untuk:", name)
+    print(recommended_items[['id', 'name', 'ingredients', 'category', 'predicted_category', 'rating', 'cluster_label']])
+
+# **Tes pencarian berdasarkan kategori (acak)**
+search_by_category("Dessert")
+
+# **Tes pencarian berdasarkan cluster (acak)**
+search_by_cluster("favorit")
+
+# **Tes pencarian berdasarkan nama makanan**
+target_item = "BURGER"
+recommend_nb(target_item)

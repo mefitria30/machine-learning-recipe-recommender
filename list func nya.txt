@@ -1,0 +1,112 @@
+Berikut adalah daftar fungsi (function), variabel, dan metode yang ada dalam script ini:
+
+1. Fungsi (Function)
+Ini adalah daftar semua fungsi yang dibuat dalam script:
+
+categorize_food(ingredients) → Mengelompokkan makanan berdasarkan jenis bahan utama.
+
+color_rating(val) → Memberikan warna berdasarkan rating makanan.
+
+get_image_path(image_name) → Mengembalikan jalur file gambar berdasarkan nama.
+
+2. Variabel
+Berikut variabel yang digunakan dalam script:
+
+a) Dataset & Preprocessing
+data → Data yang diambil dari dataset.csv.
+
+new_data → Data yang telah diproses dan diformat ulang.
+
+optimal_clusters → Jumlah cluster yang digunakan dalam K-Means (10).
+
+image_folder → Direktori tempat menyimpan gambar makanan.
+
+X_ingredients → Hasil transformasi ingredients menggunakan TF-IDF.
+
+X_name → Hasil transformasi name menggunakan TF-IDF.
+
+y → Label target yang digunakan untuk melatih model rekomendasi.
+
+b) Clustering & Kategori
+kmeans → Model K-Means untuk pengelompokan makanan berdasarkan ingredients.
+
+tfidf → TF-IDF Vectorizer untuk ingredients.
+
+cv → TF-IDF Vectorizer untuk name.
+
+model_recommendation → Model Naïve Bayes untuk rekomendasi makanan.
+
+search_option → Pilihan metode pencarian (Nama, Kategori, Cluster).
+
+c) Streamlit UI
+food_name → Nama makanan yang dimasukkan pengguna.
+
+category_name → Kategori yang dipilih pengguna.
+
+cluster_label → Label cluster yang dipilih pengguna.
+
+recommended_items → Hasil rekomendasi makanan.
+
+matching_items → Makanan yang cocok dalam kategori/cluster yang dipilih.
+
+d) Variabel sementara (untuk pengolahan data sebelum ditampilkan)
+ingredients_list → Daftar bahan makanan yang diambil dari row['ingredients'], dipisahkan dengan koma (,).
+
+steps_list → Daftar langkah memasak yang diambil dari row['steps'], dipisahkan dengan titik (.).
+
+html_code1 → HTML untuk menampilkan nama makanan dengan format khusus.
+
+html_code_steps → HTML untuk daftar langkah-langkah memasak dalam format bullet list.
+
+html_code_ingredients → HTML untuk daftar bahan makanan dalam format bullet list.
+
+html_code → HTML untuk tampilan konten makanan (digunakan dalam beberapa bagian UI).
+
+3. Metode dari Library
+Berikut metode bawaan dari pustaka yang digunakan:
+
+a) Pandas
+pd.read_csv() → Membaca dataset dari file CSV.
+
+data.dropna(inplace=True) → Menghapus data kosong.
+
+data.drop_duplicates(inplace=True) → Menghapus data duplikat.
+
+pd.to_numeric() → Mengubah rating menjadi tipe numerik.
+
+data.rename() → Mengubah nama kolom dalam dataset.
+
+data.isnull().sum() → Mengecek jumlah data yang kosong.
+
+data.duplicated().sum() → Mengecek jumlah data yang duplikat.
+
+b) NumPy
+np.random.randint() → Membuat rating acak untuk makanan.
+
+np.where() → Menentukan cluster berdasarkan rating.
+
+np.argsort() → Mengurutkan nilai probabilitas dari prediksi Naïve Bayes.
+
+c) Scikit-Learn
+TfidfVectorizer().fit_transform() → Membuat representasi teks berbasis TF-IDF.
+
+KMeans().fit_predict() → Melakukan clustering menggunakan K-Means.
+
+MultinomialNB().fit() → Melatih model Naïve Bayes untuk rekomendasi.
+
+MultinomialNB().predict_proba() → Memprediksi probabilitas rekomendasi makanan.
+
+d) Streamlit
+st.title() → Menampilkan judul aplikasi.
+
+st.radio() → Membuat pilihan metode pencarian.
+
+st.text_input() → Input teks untuk pencarian nama makanan.
+
+st.selectbox() → Dropdown pilihan kategori atau cluster.
+
+st.image() → Menampilkan gambar makanan.
+
+st.markdown() → Menampilkan teks dengan format HTML.
+
+st.divider() → Menambahkan pembatas dalam UI.

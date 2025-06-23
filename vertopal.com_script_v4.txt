@@ -1,0 +1,366 @@
+
+
+    import streamlit as st
+    import pandas as pd
+    import numpy as np
+    import random
+    import os  # Untuk menangani jalur file gambar
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.naive_bayes import MultinomialNB
+    from sklearn.cluster import KMeans
+    import matplotlib.pyplot as plt
+
+    # Load dataset
+    data = pd.read_csv("dataset.csv")
+
+    # Tambahkan kolom rating jika belum ada, lalu simpan agar permanen
+    if 'rating' not in data.columns:
+        data['rating'] = np.random.randint(1, 6, size=len(data))
+        data.to_csv("dataset.csv", index=False)  # Simpan ke file agar tetap konsisten
+
+    # Pastikan membaca dataset terbaru setelah pembaruan rating
+    data = pd.read_csv("dataset.csv")
+
+    data.isnull().sum()
+
+    id                     0
+    name                   5
+    ingredients            0
+    steps                  8
+    image                  0
+    Cleaned_Ingredients    0
+    rating                 0
+    dtype: int64
+
+    data.dropna(inplace=True)
+
+    data.isnull().sum()
+
+    id                     0
+    name                   0
+    ingredients            0
+    steps                  0
+    image                  0
+    Cleaned_Ingredients    0
+    rating                 0
+    dtype: int64
+
+    data.duplicated().sum()
+
+    np.int64(0)
+
+    data.drop_duplicates(inplace=True)
+
+    data['rating'] = pd.to_numeric(data['rating'], errors='coerce')
+
+    data = data[(data['rating'] >= 1) & (data['rating'] <= 5)]
+
+    # Ubah format ingredients dari list menjadi string dengan koma
+    data['ingredients'] = data['ingredients'].apply(lambda x: ', '.join(eval(x)) if isinstance(x, str) else x)
+
+    data.drop(columns=['Cleaned_Ingredients'], inplace=True)
+
+    # Rename columns
+    data.rename(columns={'Unnamed: 0': 'id', 'Title': 'name', 'Ingredients': 'ingredients',
+                         'Instructions': 'steps', 'Image_Name': 'image'}, inplace=True)
+
+    # Pilih kolom yang relevan
+    new_data = data[['id', 'name', 'ingredients', 'steps', 'image', 'rating']]
+
+    # Tetapkan cluster berdasarkan nilai rating dengan kategori baru
+    new_data['cluster'] = np.where(new_data['rating'] == 1, 1, 
+                            np.where(new_data['rating'] == 2, 2, 
+                            np.where(new_data['rating'] == 3, 3, 
+                            np.where(new_data['rating'] == 4, 4, 5)))) 
+
+    # Tetapkan label cluster sesuai rating yang diperbarui
+    new_data['cluster_label'] = new_data['cluster'].map({
+        1: 'Boleh Dicoba',
+        2: 'Enak',
+        3: 'Lezat',
+        4: 'Populer',
+        5: 'Favorite!!!'
+    })
+
+    # Gunakan TF-IDF lebih optimal
+    tfidf = TfidfVectorizer(stop_words='english', max_features=20000, ngram_range=(1, 3))
+    X_ingredients = tfidf.fit_transform(new_data['ingredients'].values.astype('U'))
+
+    # Gunakan K-Means dengan cluster lebih optimal
+    optimal_clusters = 10
+    kmeans = KMeans(n_clusters=optimal_clusters, random_state=42)
+    new_data['category_num'] = kmeans.fit_predict(X_ingredients)
+
+    # Pemetaan kategori lebih rinci berdasarkan ingredients
+    def categorize_food(ingredients):
+        ingredients = ingredients.lower()
+
+        # 🍖 Daging & Protein Hewani
+        if any(item in ingredients for item in ['beef', 'lamb', 'pork', 'chicken', 'turkey', 'duck', 'bacon', 'sausage']):
+            return "Meat-Based"
+        elif any(item in ingredients for item in ['fish', 'shrimp', 'salmon', 'tuna', 'crab', 'mussels']):
+            return "Seafood"
+        
+        # 🥦 Sayuran & Tanaman
+        elif any(item in ingredients for item in ['spinach', 'kale', 'lettuce', 'broccoli', 'carrot', 'potato', 'tomato', 'cucumber', 'mushroom']):
+            return "Vegetarian"
+
+        # 🍚 Sumber Karbohidrat
+        elif any(item in ingredients for item in ['rice', 'oats', 'quinoa', 'barley', 'flour', 'bread', 'pasta', 'tortilla', 'sweet potato']):
+            return "Bakery"
+
+        # 🍶 Produk Susu & Alternatifnya
+        elif any(item in ingredients for item in ['milk', 'cheese', 'butter', 'yogurt', 'almond milk', 'soy milk']):
+            return "Dairy-Based"
+
+        # 🍯 Pemanis & Perasa
+        elif any(item in ingredients for item in ['sugar', 'honey', 'maple syrup', 'stevia', 'salt', 'pepper', 'garlic', 'cinnamon', 'basil', 'oregano']):
+            return "Seasoning & Sweetener"
+
+        # 🍩 Dessert & Bahan Kue
+        elif any(item in ingredients for item in ['chocolate', 'cocoa', 'vanilla', 'eggs', 'baking powder']):
+            return "Dessert"
+        
+        else:
+            return "Other"
+
+    new_data['category'] = new_data['ingredients'].apply(categorize_food)
+
+    # Gunakan Naïve Bayes untuk rekomendasi
+    cv = TfidfVectorizer(max_features=20000, stop_words='english', ngram_range=(1, 3))
+    X_name = cv.fit_transform(new_data['name'].values.astype('U'))
+
+    model_recommendation = MultinomialNB(alpha=0.5)
+    y = np.arange(len(new_data))
+    model_recommendation.fit(X_name, y)
+
+    MultinomialNB(alpha=0.5)
+
+    # **Streamlit UI**
+    st.title("🔍 Sistem Rekomendasi Makanan")
+
+    2025-06-01 22:49:03.283 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+    2025-06-01 22:49:03.285 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+
+    DeltaGenerator()
+
+    # Tentukan folder gambar
+    image_folder = "Food Images"
+
+    # Pilihan pencarian
+    search_option = st.radio("Pilih metode pencarian:", ["Cari berdasarkan nama", "Cari berdasarkan kategori", "Cari berdasarkan cluster"])
+
+    2025-06-01 22:49:06.402 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+    2025-06-01 22:49:06.404 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+    2025-06-01 22:49:06.406 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+    2025-06-01 22:49:06.410 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+    2025-06-01 22:49:06.412 Session state does not function when running a script without `streamlit run`
+    2025-06-01 22:49:06.418 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+    2025-06-01 22:49:06.419 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+
+    # Fungsi untuk memberi warna berdasarkan rating
+    def color_rating(val):
+        color = "#FFCCCB" if int(val) <= 3 else "#C6E5B3"
+        return f"background-color: {color};"
+
+    # Fungsi untuk mendapatkan jalur gambar dengan pengecekan format
+    def get_image_path(image_name):
+        for ext in [".jpg", ".png", ".jpeg"]:  # Coba beberapa kemungkinan format
+            image_path = os.path.join(image_folder, image_name + ext)
+            if os.path.exists(image_path):
+                return image_path
+        return None
+
+    if search_option == "Cari berdasarkan nama":
+        food_name = st.text_input("Masukkan nama makanan:")
+        if food_name:
+            query_vec = cv.transform([food_name.lower()])
+            predicted_probs = model_recommendation.predict_proba(query_vec)[0]
+            top_5_indices = np.argsort(predicted_probs)[-5:][::-1]
+            recommended_items = new_data.iloc[top_5_indices].dropna().reset_index(drop=True)
+
+            st.subheader(f"🍽️ Rekomendasi untuk: {food_name}")
+
+            for _, row in recommended_items.iterrows():
+                image_path = get_image_path(row['image'].split('.')[0])  # Hapus ekstensi jika ada
+                if image_path:
+                    html_code1 = f"""
+                        <h1><span style='text-weight: bold;'>{row['name']}</span></h1>
+                    """
+                    st.markdown(html_code1, unsafe_allow_html=True)
+                    st.image(image_path, caption=row['name'])
+
+                    ingredients_list = row['ingredients'].split(',')
+                    html_code_ingredients = "<ul>"
+                    for ingredient in ingredients_list:
+                        if ingredient.strip():  # Menghindari elemen kosong
+                            html_code_ingredients += f"<li>{ingredient.strip()}</li>"
+                    html_code_ingredients += "</ul>"
+
+                    steps_list = row['steps'].split('.')
+                    html_code_steps = "<ul>"
+                    for step in steps_list:
+                        if step.strip():  # Menghindari elemen kosong
+                            html_code_steps += f"<li>{step.strip()}</li>"
+                    html_code_steps += "</ul>"
+
+                    html_code = f"""
+                        <table border="1">
+                            <tr>
+                                <td>Category:</td>
+                                <td>{row['category']}</td>
+                            </tr>                        
+                            <tr>
+                                <td>Ingredients:</td>
+                                <td>{html_code_ingredients}</td>
+                            </tr>
+                            <tr>
+                                <td>Steps:</td>
+                                <td>{html_code_steps}</td>
+                            </tr>
+                            <tr>
+                                <td>Rating:</td>
+                                <td>{row['rating']}</td>
+                            </tr>
+                            <tr>
+                                <td>Cluster:</td>
+                                <td>{row['cluster_label']}</td>
+                            </tr>
+                        </table>
+                    """
+                    st.markdown(html_code, unsafe_allow_html=True)
+                    st.divider()
+                    st.divider()
+                else:
+                    st.write(f"⚠️ Gambar tidak ditemukan: {row['image']}")
+
+            # st.dataframe(recommended_items.style.applymap(color_rating, subset=['rating']), width=900)
+    elif search_option == "Cari berdasarkan kategori":
+        category_name = st.selectbox("Pilih kategori:", new_data['category'].unique())
+        if category_name:
+            matching_items = new_data[new_data['category'] == category_name].sample(5).dropna().reset_index(drop=True)
+
+            st.subheader(f"Makanan dalam kategori '{category_name}':")
+
+            for _, row in matching_items.iterrows():
+                image_path = get_image_path(row['image'].split('.')[0])
+                if image_path:
+                    html_code1 = f"""
+                        <h1><span style='text-weight: bold;'>{row['name']}</span></h1>
+                    """
+                    st.markdown(html_code1, unsafe_allow_html=True)
+                    st.image(image_path, caption=row['name'])
+
+                    ingredients_list = row['ingredients'].split(',')
+                    html_code_ingredients = "<ul>"
+                    for ingredient in ingredients_list:
+                        if ingredient.strip():  # Menghindari elemen kosong
+                            html_code_ingredients += f"<li>{ingredient.strip()}</li>"
+                    html_code_ingredients += "</ul>"
+
+                    steps_list = row['steps'].split('.')
+                    html_code_steps = "<ul>"
+                    for step in steps_list:
+                        if step.strip():  # Menghindari elemen kosong
+                            html_code_steps += f"<li>{step.strip()}</li>"
+                    html_code_steps += "</ul>"
+
+                    html_code = f"""
+                        <table border="1">
+                            <tr>
+                                <td>Category:</td>
+                                <td>{row['category']}</td>
+                            </tr>                        
+                            <tr>
+                                <td>Ingredients:</td>
+                                <td>{html_code_ingredients}</td>
+                            </tr>
+                            <tr>
+                                <td>Steps:</td>
+                                <td>{html_code_steps}</td>
+                            </tr>
+                            <tr>
+                                <td>Rating:</td>
+                                <td>{row['rating']}</td>
+                            </tr>
+                            <tr>
+                                <td>Cluster:</td>
+                                <td>{row['cluster_label']}</td>
+                            </tr>
+                        </table>
+                    """
+                    st.markdown(html_code, unsafe_allow_html=True)
+                    st.divider()
+                    st.divider()
+                else:
+                    st.write(f"⚠️ Gambar tidak ditemukan: {row['image']}")
+
+            # st.dataframe(matching_items.style.applymap(color_rating, subset=['rating']), width=900)
+    elif search_option == "Cari berdasarkan cluster":
+        cluster_label = st.selectbox("Pilih cluster:", new_data['cluster_label'].unique())
+        if cluster_label:
+            matching_items = new_data[new_data['cluster_label'] == cluster_label].sample(5).dropna().reset_index(drop=True)
+
+            st.subheader(f"Makanan dalam cluster '{cluster_label}':")
+
+            for _, row in matching_items.iterrows():
+                image_path = get_image_path(row['image'].split('.')[0])
+                if image_path:
+                    html_code1 = f"""
+                        <h1><span style='text-weight: bold;'>{row['name']}</span></h1>
+                    """
+                    st.markdown(html_code1, unsafe_allow_html=True)
+                    st.image(image_path, caption=row['name'])
+
+                    ingredients_list = row['ingredients'].split(',')
+                    html_code_ingredients = "<ul>"
+                    for ingredient in ingredients_list:
+                        if ingredient.strip():  # Menghindari elemen kosong
+                            html_code_ingredients += f"<li>{ingredient.strip()}</li>"
+                    html_code_ingredients += "</ul>"
+
+                    steps_list = row['steps'].split('.')
+                    html_code_steps = "<ul>"
+                    for step in steps_list:
+                        if step.strip():  # Menghindari elemen kosong
+                            html_code_steps += f"<li>{step.strip()}</li>"
+                    html_code_steps += "</ul>"
+
+                    html_code = f"""
+                        <table border="1">
+                            <tr>
+                                <td>Category:</td>
+                                <td>{row['category']}</td>
+                            </tr>                        
+                            <tr>
+                                <td>Ingredients:</td>
+                                <td>{html_code_ingredients}</td>
+                            </tr>
+                            <tr>
+                                <td>Steps:</td>
+                                <td>{html_code_steps}</td>
+                            </tr>
+                            <tr>
+                                <td>Rating:</td>
+                                <td>{row['rating']}</td>
+                            </tr>
+                            <tr>
+                                <td>Cluster:</td>
+                                <td>{row['cluster_label']}</td>
+                            </tr>
+                        </table>
+                    """
+                    st.markdown(html_code, unsafe_allow_html=True)
+                    st.divider()
+                    st.divider()
+                else:
+                    st.write(f"⚠️ Gambar tidak ditemukan: {row['image']}")
+
+            # st.dataframe(matching_items.style.applymap(color_rating, subset=['rating']), width=900)
+
+    2025-06-01 22:49:11.687 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+    2025-06-01 22:49:11.690 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+    2025-06-01 22:49:11.694 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+    2025-06-01 22:49:11.696 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+    2025-06-01 22:49:11.699 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+    2025-06-01 22:49:11.702 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.

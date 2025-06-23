@@ -1,0 +1,38 @@
+import pandas as pd
+import numpy as np
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB
+
+# Load dataset
+data = pd.read_csv('dataset.csv')
+
+# Rename columns
+data.rename(columns={'Unnamed: 0': 'id', 'Title': 'name', 'Ingredients': 'ingredients',
+                     'Instructions': 'steps', 'Image_Name': 'image'}, inplace=True)
+
+# Pilih kolom yang relevan
+new_data = data[['id', 'name', 'ingredients', 'steps', 'image']]
+
+# Konversi teks ke fitur numerik
+cv = CountVectorizer(max_features=10000, stop_words='english')
+X = cv.fit_transform(new_data['name'].values.astype('U'))  # Ubah nama menjadi vektor
+
+# Gunakan Naïve Bayes untuk klasifikasi
+model = MultinomialNB()
+y = np.arange(len(new_data))  # Gunakan indeks sebagai label untuk prediksi
+model.fit(X, y)  # Latih model dengan teks
+
+# Fungsi rekomendasi untuk menampilkan 5 hasil
+def recommend_nb(data):
+    query_vec = cv.transform([data.lower()])  # Ubah input ke format vektor
+    predicted_probs = model.predict_proba(query_vec)[0]  # Dapatkan probabilitas tiap item
+    top_5_indices = np.argsort(predicted_probs)[-5:][::-1]  # Ambil 5 teratas
+
+    recommended_items = new_data.iloc[top_5_indices]  # Ambil 5 item berdasarkan prediksi
+    
+    print("Rekomendasi untuk:", data)
+    print(recommended_items[['id', 'name', 'ingredients', 'steps', 'image']])
+
+# Tes rekomendasi dengan input
+target_item = "BURGER"
+recommend_nb(target_item)

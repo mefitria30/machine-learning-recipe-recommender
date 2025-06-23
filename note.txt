@@ -1,0 +1,6 @@
+fix pake versi 7
+
+fix semenetara dan ok => script_v4
+
+jupyter nbconvert --to script script_v4.ipynb
+streamlit run script_v4.py

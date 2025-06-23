@@ -1,0 +1,94 @@
+    import pandas as pd
+    import numpy as np
+
+    data = pd.read_csv('dataset.csv')
+
+    data
+
+    # Ubah nama kolom 'Unnamed: 0' menjadi 'id'
+    data.rename(columns={'Unnamed: 0': 'id'}, inplace=True)
+
+    data
+
+    data.columns
+
+    Index(['id', 'Title', 'Ingredients', 'Instructions', 'Image_Name',
+           'Cleaned_Ingredients'],
+          dtype='object')
+
+    data.info()
+
+    data.head()
+
+    data.rename(columns={'Image_Name': 'image'}, inplace=True)
+
+    data
+
+    data.rename(columns={'Instructions': 'steps'}, inplace=True)
+
+    data.rename(columns={'Ingredients': 'ingredients'}, inplace=True)
+
+    data.rename(columns={'Title': 'name'}, inplace=True)
+
+    data
+
+    new_data = data[['id', 'name', 'ingredients', 'steps', 'image']]
+
+    new_data = data.drop(columns=['Cleaned_Ingredients'])
+
+    new_data.head()
+
+    from sklearn.feature_extraction.text import CountVectorizer
+
+    cv = CountVectorizer(max_features=10000, stop_words='english')
+
+    cv
+
+    CountVectorizer(max_features=10000, stop_words='english')
+
+    vec = cv.fit_transform(new_data['image'].values.astype('U')).toarray()
+
+    vec
+
+    vec.shape
+
+    from sklearn.metrics.pairwise import cosine_similarity
+
+    sim = cosine_similarity(vec)
+
+    sim
+
+    new_data[new_data['name']=="Newton's Law"]
+
+    dist = sorted(list(enumerate(sim[0])), reverse=True, key=lambda vec:vec[1])
+
+    dist
+
+    for i in dist[0:5]:
+        print(new_data.iloc[i[0]].name)
+
+    def recommend(data):
+        keywords = data.lower().split()
+        matches = new_data[new_data['name'].astype(str).str.lower().apply(lambda name: any(keyword in name for keyword in keywords))].index.tolist()
+
+        if not matches:  
+            print(f"Tidak ada rekomendasi untuk '{data}'")
+            return
+
+        distance = sorted(list(enumerate(sim[matches].mean(axis=0))), reverse=True, key=lambda vec: vec[1])
+        recommended_items = new_data.iloc[[i[0] for i in distance[:5]]].copy()
+
+        # Konversi list ke format string agar lebih bersih
+        recommended_items.loc[:, 'ingredients'] = recommended_items['ingredients'].apply(lambda x: ', '.join(x) if isinstance(x, list) else x)
+        recommended_items.loc[:, 'steps'] = recommended_items['steps'].apply(lambda x: ' '.join(x) if isinstance(x, list) else x)
+
+        # Simpan hasil dalam bentuk list of dictionaries
+        result_array = recommended_items[['id', 'name', 'ingredients', 'steps', 'image']].to_dict(orient="records")
+        
+        return result_array
+
+    # Nama item yang ingin direkomendasikan
+    target_item = "BURGER"
+
+    # Panggil fungsi rekomendasi secara otomatis saat script dijalankan
+    recommend(target_item)

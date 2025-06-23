@@ -1,0 +1,33 @@
+Tentu! Skrip ini menggabungkan beberapa teknik machine learning dan pemrosesan data untuk membangun sistem rekomendasi dan pengelompokan makanan berdasarkan bahan (ingredients). Berikut adalah rincian teknologi yang digunakan:
+
+🛠 Teknologi yang Digunakan
+Skrip ini menggunakan beberapa teknik utama dalam Natural Language Processing (NLP) dan machine learning, termasuk:
+
+1️⃣ Pandas (Data Manipulation)
+✔ Digunakan untuk membaca, memproses, dan mengelola dataset ✔ Memanipulasi data seperti mengubah nama kolom, menambahkan kolom rating dan cluster
+
+2️⃣ Random Library (Rating & Cluster Generation)
+✔ Menambahkan rating acak antara 1-5 untuk setiap makanan ✔ Menambahkan cluster acak (biasa saja dan favorit) agar ada preferensi dalam makanan
+
+3️⃣ TF-IDF Vectorizer (Text Feature Extraction)
+✔ Mengubah teks bahan makanan (ingredients) menjadi format numerik ✔ Digunakan untuk mengetahui kesamaan bahan makanan saat proses pengelompokan
+
+4️⃣ K-Means Clustering (Kategori Makanan Otomatis)
+✔ Mengelompokkan makanan berdasarkan kesamaan bahan secara otomatis ✔ Menggunakan unsupervised learning untuk menemukan kategori makanan ✔ Kategori ditetapkan berdasarkan hasil clustering
+
+5️⃣ Naïve Bayes Classifier (Model Rekomendasi)
+✔ Menggunakan Naïve Bayes untuk mencari makanan berdasarkan nama ✔ Memproses nama makanan dan mencocokkannya dengan makanan lain yang serupa ✔ Naïve Bayes bekerja dengan probabilitas, menemukan makanan dengan skor tertinggi
+
+6️⃣ Pencarian Berbasis Kategori & Cluster
+✔ Pencarian berdasarkan kategori dilakukan dengan filtering data ✔ Pencarian berdasarkan cluster (favorit atau biasa saja) juga dilakukan dengan filtering
+
+7️⃣ Pengacakan Hasil Pencarian (sample(frac=1).head(N))
+✔ Setiap hasil pencarian selalu berubah ✔ Menggunakan .sample(frac=1) agar urutan hasil selalu berbeda
+
+📌 Bagaimana Semua Teknologi Bekerja Bersama?
+1️⃣ Dataset dibersihkan dan diproses menggunakan Pandas 2️⃣ Rating dan cluster ditambahkan secara acak untuk memberikan preferensi makanan 3️⃣ TF-IDF digunakan untuk mengubah bahan (ingredients) ke dalam format numerik 4️⃣ K-Means Clustering menentukan kategori makanan secara otomatis berdasarkan bahan 5️⃣ Naïve Bayes dilatih untuk merekomendasikan makanan berdasarkan nama 6️⃣ Fungsi pencarian dapat dilakukan berdasarkan kategori, cluster, atau nama makanan 7️⃣ Semua hasil selalu diacak untuk memberikan variasi
+
+🎯 Keunggulan Skrip Ini
+✅ Makanan dikelompokkan secara otomatis berdasarkan bahan, tanpa perlu input manual ✅ Sistem rekomendasi berbasis probabilitas, memastikan makanan yang paling relevan ✅ Hasil pencarian selalu berbeda setiap kali fungsi dipanggil ✅ Fleksibel! Bisa mencari berdasarkan kategori, cluster, atau nama ✅ Dapat dengan mudah diperluas dengan lebih banyak kategori atau fitur tambahan
+
+💡 Kesimpulan Skrip ini adalah kombinasi data science, NLP, dan machine learning, yang membuatnya sangat efisien dan fleksibel untuk sistem rekomendasi makanan.
